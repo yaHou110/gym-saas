@@ -198,7 +198,7 @@ Output valid JSON only.`;
         success: true,
         data: {
           summary: isFa
-            ? `ورزشکار با پایبندی ${complianceRate}% و تغییر وزن ${delta} کیلوگرم عملکرد پایداری داشت�� است. شاخص خواب (${sleepScore}/۱۰) نیازمند بهینه‌سازی است.`
+            ? `ورزشکار با پایبندی ${complianceRate}% و تغییر وزن ${delta} کیلوگرم عملکر�� پایداری داشت�� است. شاخص خواب (${sleepScore}/۱۰) نیازمند بهینه‌سازی است.`
             : `Athlete demonstrated solid protocol adherence (${complianceRate}%) with a net weight delta of ${delta}kg. Sleep score (${sleepScore}/10) warrants attention.`,
           recoveryStatus: Number(stressScore || 5) > 7 || Number(sorenessScore || 5) > 7 ? 'Caution' : 'Optimal',
           weightDeltaAssessment: isFa
@@ -277,7 +277,9 @@ Output valid JSON only.`;
     const vite = await createViteServer({
       server: {
         middlewareMode: true,
-        hmr: { server: httpServer },
+        // The preview proxy does not forward Vite's HMR WebSocket reliably.
+        // Disable the client transport to prevent repeated connection errors.
+        hmr: false,
       },
       appType: 'spa',
     });
