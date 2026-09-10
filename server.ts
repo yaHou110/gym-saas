@@ -1,4 +1,5 @@
 import express from 'express';
+import http from 'http';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
@@ -197,7 +198,7 @@ Output valid JSON only.`;
         success: true,
         data: {
           summary: isFa
-            ? `ورزشکار با پایبندی ${complianceRate}% و تغییر وزن ${delta} کیلوگرم عملکرد پایداری داشته است. شاخص خواب (${sleepScore}/۱۰) نیازمند بهینه‌سازی است.`
+            ? `ورزشکار با پایبندی ${complianceRate}% و تغییر وزن ${delta} کیلوگرم عملکرد پایداری داشت�� است. شاخص خواب (${sleepScore}/۱۰) نیازمند بهینه‌سازی است.`
             : `Athlete demonstrated solid protocol adherence (${complianceRate}%) with a net weight delta of ${delta}kg. Sleep score (${sleepScore}/10) warrants attention.`,
           recoveryStatus: Number(stressScore || 5) > 7 || Number(sorenessScore || 5) > 7 ? 'Caution' : 'Optimal',
           weightDeltaAssessment: isFa
@@ -271,9 +272,13 @@ Output valid JSON only.`;
   });
 
   // Vite middleware for development
+  const httpServer = http.createServer(app);
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        hmr: { server: httpServer },
+      },
       appType: 'spa',
     });
     app.use(vite.middlewares);
@@ -285,7 +290,7 @@ Output valid JSON only.`;
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`Athletica Server running on http://0.0.0.0:${PORT}`);
   });
 }
