@@ -66,7 +66,7 @@ export const StorageManager = {
 
   getLanguage(): Language {
     const lang = localStorage.getItem(STORAGE_KEYS.LANG);
-    return (lang as Language) || 'en';
+    return lang === 'fa' || lang === 'en' ? lang : 'fa';
   },
   setLanguage(lang: Language): void {
     localStorage.setItem(STORAGE_KEYS.LANG, lang);

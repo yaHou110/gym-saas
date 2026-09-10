@@ -46,7 +46,7 @@ import {
 export default function App() {
   // Global State
   const [role, setRole] = useState<UserRole>('coach');
-  const [language, setLanguage] = useState<Language>('en');
+  const [language, setLanguage] = useState<Language>(() => StorageManager.getLanguage());
   const [activeTab, setActiveTab] = useState<string>('roster');
 
   // Domain State loaded from Storage
@@ -76,6 +76,10 @@ export default function App() {
   // Active athlete object
   const currentAthlete = athletes.find((a) => a.id === selectedAthleteId) || athletes[0];
   const t = translations[language];
+  const handleLanguageChange = (nextLanguage: Language) => {
+    setLanguage(nextLanguage);
+    StorageManager.setLanguage(nextLanguage);
+  };
 
   // Handle RTL direction switch
   useEffect(() => {
@@ -244,7 +248,7 @@ export default function App() {
         currentRole={role}
         onRoleChange={handleRoleChange}
         language={language}
-        onLanguageChange={setLanguage}
+        onLanguageChange={handleLanguageChange}
         onOpenAICoach={() => setIsAICoachOpen(true)}
         onOpenChat={() => setIsChatOpen(true)}
         unreadMessagesCount={unreadChatCount}

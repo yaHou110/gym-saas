@@ -22,21 +22,46 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  app.use(express.json());
+  app.use(express.json({ limit: '32kb' }));
+
+  const requestCounts = new Map<string, { count: number; resetAt: number }>();
+  const rateLimit = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const now = Date.now();
+    const key = req.ip || 'unknown';
+    const current = requestCounts.get(key);
+    if (!current || current.resetAt <= now) {
+      requestCounts.set(key, { count: 1, resetAt: now + 60_000 });
+      return next();
+    }
+    if (current.count >= 20) return res.status(429).json({ error: 'Too many requests' });
+    current.count += 1;
+    return next();
+  };
+
+  const textField = (value: unknown, max: number): string | undefined =>
+    typeof value === 'string' ? value.trim().slice(0, max) : undefined;
+  const numberField = (value: unknown, min: number, max: number): number | undefined => {
+    const parsed = typeof value === 'number' ? value : Number(value);
+    return Number.isFinite(parsed) && parsed >= min && parsed <= max ? parsed : undefined;
+  };
 
   // Health check endpoint
   app.get('/api/health', (req, res) => {
     res.json({
       status: 'ok',
-      hasGeminiKey: !!process.env.GEMINI_API_KEY,
       timestamp: new Date().toISOString(),
     });
   });
 
   // Server-side AI Workout Generation Endpoint
-  app.post('/api/ai/generate-workout', async (req, res) => {
+  app.post('/api/ai/generate-workout', rateLimit, async (req, res) => {
     try {
-      const { goal, experienceLevel, daysPerWeek, injuries, equipment, lang } = req.body;
+      const goal = textField(req.body.goal, 40) || 'Hypertrophy';
+      const experienceLevel = textField(req.body.experienceLevel, 40) || 'Intermediate';
+      const daysPerWeek = numberField(req.body.daysPerWeek, 1, 7) || 4;
+      const injuries = textField(req.body.injuries, 500) || 'None';
+      const equipment = textField(req.body.equipment, 500) || 'Commercial gym';
+      const lang = req.body.lang === 'fa' ? 'fa' : 'en';
       const ai = getAI();
 
       if (ai) {
@@ -148,7 +173,7 @@ Output valid JSON only.`;
   });
 
   // Server-side AI Check-In Analyzer Endpoint
-  app.post('/api/ai/analyze-checkin', async (req, res) => {
+  app.post('/api/ai/analyze-checkin', rateLimit, async (req, res) => {
     try {
       const { athleteName, currentWeight, previousWeight, sleepScore, stressScore, sorenessScore, complianceRate, notes, lang } = req.body;
       const ai = getAI();
@@ -227,12 +252,21 @@ Output valid JSON only.`;
   });
 
   // Server-side AI Nutrition & Macro Calculation Endpoint
-  app.post('/api/ai/calculate-macros', async (req, res) => {
+  app.post('/api/ai/calculate-macros', rateLimit, async (req, res) => {
     try {
-      const { weightKg, heightCm, age, gender, goal, activityLevel, lang } = req.body;
-      const w = Number(weightKg) || 75;
-      const h = Number(heightCm) || 175;
-      const a = Number(age) || 26;
+      const weightKg = numberField(req.body.weightKg, 25, 300);
+      const heightCm = numberField(req.body.heightCm, 100, 250);
+      const age = numberField(req.body.age, 13, 100);
+      if (!weightKg || !heightCm || !age) {
+        return res.status(400).json({ error: 'Invalid body metrics' });
+      }
+      const gender = req.body.gender === 'female' ? 'female' : 'male';
+      const goal = textField(req.body.goal, 40) || 'Maintenance';
+      const activityLevel = textField(req.body.activityLevel, 40) || 'moderate';
+      const lang = req.body.lang === 'fa' ? 'fa' : 'en';
+      const w = weightKg;
+      const h = heightCm;
+      const a = age;
       const isMale = gender !== 'female';
 
       // Mifflin-St Jeor BMR

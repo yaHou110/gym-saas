@@ -28,6 +28,7 @@ export const AICoachAssistantModal: React.FC<AICoachAssistantModalProps> = ({
   const [activeMode, setActiveMode] = useState<'workout' | 'checkin' | 'macro'>('workout');
   const [isLoading, setIsLoading] = useState(false);
   const [resultData, setResultData] = useState<any>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Workout Generator Form State
   const [goal, setGoal] = useState<FitnessGoal>('Hypertrophy');
@@ -47,6 +48,7 @@ export const AICoachAssistantModal: React.FC<AICoachAssistantModalProps> = ({
   const handleGenerateWorkout = async () => {
     setIsLoading(true);
     setResultData(null);
+    setErrorMessage(null);
     try {
       const res = await fetch('/api/ai/generate-workout', {
         method: 'POST',
@@ -61,11 +63,13 @@ export const AICoachAssistantModal: React.FC<AICoachAssistantModalProps> = ({
         }),
       });
       const json = await res.json();
-      if (json.success && json.data) {
-        setResultData(json.data);
+      if (!res.ok || !json.success || !json.data) {
+        throw new Error('درخواست ناموفق بود. لطفاً دوباره تلاش کنید.');
       }
+      setResultData(json.data);
     } catch (err) {
-      console.warn('AI Workout error:', err);
+      console.warn('[v0] AI Workout error:', err);
+      setErrorMessage('درخواست ناموفق بود. لطفاً دوباره تلاش کنید.');
     } finally {
       setIsLoading(false);
     }
@@ -74,6 +78,7 @@ export const AICoachAssistantModal: React.FC<AICoachAssistantModalProps> = ({
   const handleCalculateMacros = async () => {
     setIsLoading(true);
     setResultData(null);
+    setErrorMessage(null);
     try {
       const res = await fetch('/api/ai/calculate-macros', {
         method: 'POST',
@@ -88,11 +93,13 @@ export const AICoachAssistantModal: React.FC<AICoachAssistantModalProps> = ({
         }),
       });
       const json = await res.json();
-      if (json.success && json.data) {
-        setResultData(json.data);
+      if (!res.ok || !json.success || !json.data) {
+        throw new Error('درخواست ناموفق بود. لطفاً دوباره تلاش کنید.');
       }
+      setResultData(json.data);
     } catch (err) {
-      console.warn('Macro calc error:', err);
+      console.warn('[v0] Macro calc error:', err);
+      setErrorMessage('محاسبه ناموفق بود. مقادیر واردشده را بررسی کنید.');
     } finally {
       setIsLoading(false);
     }
@@ -117,7 +124,9 @@ export const AICoachAssistantModal: React.FC<AICoachAssistantModalProps> = ({
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
+            aria-label="Close AI assistant"
             className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
           >
             ✕
@@ -288,6 +297,13 @@ export const AICoachAssistantModal: React.FC<AICoachAssistantModalProps> = ({
                 <Calculator className="w-4 h-4" />
                 <span>{isLoading ? 'Computing Metabolic Equations...' : 'Calculate Optimal Macro Split'}</span>
               </button>
+            </div>
+          )}
+
+          {errorMessage && (
+            <div role="alert" className="flex items-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-200">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{errorMessage}</span>
             </div>
           )}
 
