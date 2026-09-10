@@ -1,0 +1,6 @@
+{
+  "name": "Athletica - Coach & Athlete Management Platform",
+  "description": "Production-grade Coach–Athlete Training Management SaaS featuring periodized program building, interactive workout logging with rest timers, macro nutrition planning, weekly check-in workflows, readiness analytics, and AI training assistant.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
