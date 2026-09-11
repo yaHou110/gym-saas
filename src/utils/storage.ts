@@ -16,7 +16,7 @@ import {
   INITIAL_PROFILES,
   INITIAL_ATHLETES,
   INITIAL_PROGRAMS,
-  INITIAL_NUTRITION,
+  INITIAL_NUTRITION_PLANS,
   INITIAL_CHECKINS,
   INITIAL_MESSAGES,
   INITIAL_PRS,
@@ -24,9 +24,10 @@ import {
   INITIAL_AUDIT_LOGS,
 } from '../data/seedData';
 
-const STORAGE_KEYS = {
+export const STORAGE_KEYS = {
   ROLE: 'athletica_current_role',
   LANG: 'athletica_language',
+  TAB: 'athletica_active_tab',
   ATHLETES: 'athletica_athletes',
   PROGRAMS: 'athletica_programs',
   NUTRITION: 'athletica_nutrition',
@@ -36,7 +37,7 @@ const STORAGE_KEYS = {
   EXERCISES: 'athletica_exercises',
   AUDIT: 'athletica_audit_logs',
   SESSION: 'athletica_today_session',
-};
+} as const;
 
 function getStorage<T>(key: string, fallback: T): T {
   try {
@@ -55,21 +56,80 @@ function setStorage<T>(key: string, data: T): void {
   }
 }
 
+const VALID_ROLES: readonly UserRole[] = ['coach', 'athlete', 'dietitian', 'admin'] as const;
+
 export const StorageManager = {
   getRole(): UserRole {
-    const role = localStorage.getItem(STORAGE_KEYS.ROLE);
-    return (role as UserRole) || 'coach';
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.ROLE);
+      if (!raw) return 'coach';
+      let val: string = raw;
+      // Legacy: value may have been stored via JSON.stringify (e.g. "\"coach\"") or as {role:"coach"}
+      try {
+        const parsed = JSON.parse(raw);
+        if (typeof parsed === 'string') val = parsed;
+        else if (parsed && typeof parsed === 'object' && typeof (parsed as Record<string, unknown>).role === 'string') {
+          val = (parsed as Record<string, string>).role;
+        }
+      } catch {
+        // raw is plain string — use as-is
+      }
+      const normalized = val.trim().toLowerCase();
+      if ((VALID_ROLES as readonly string[]).includes(normalized)) return normalized as UserRole;
+      return 'coach';
+    } catch {
+      return 'coach';
+    }
   },
   setRole(role: UserRole): void {
-    localStorage.setItem(STORAGE_KEYS.ROLE, role);
+    const normalized = role?.trim?.().toLowerCase() as UserRole;
+    const safe = (VALID_ROLES as readonly string[]).includes(normalized) ? normalized : 'coach';
+    localStorage.setItem(STORAGE_KEYS.ROLE, safe);
   },
 
   getLanguage(): Language {
-    const lang = localStorage.getItem(STORAGE_KEYS.LANG);
-    return (lang as Language) || 'en';
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.LANG);
+      if (!raw) return 'en';
+      let val: string = raw;
+      try {
+        const parsed = JSON.parse(raw);
+        if (typeof parsed === 'string') val = parsed;
+        else if (parsed && typeof parsed === 'object') {
+          const obj = parsed as Record<string, unknown>;
+          if (typeof obj.lang === 'string') val = obj.lang;
+          else if (typeof obj.language === 'string') val = obj.language;
+        }
+      } catch {
+        // plain string
+      }
+      const normalized = val.trim().toLowerCase();
+      if (normalized.startsWith('fa')) return 'fa';
+      if (normalized.startsWith('en')) return 'en';
+      return 'en';
+    } catch {
+      return 'en';
+    }
   },
   setLanguage(lang: Language): void {
-    localStorage.setItem(STORAGE_KEYS.LANG, lang);
+    const normalized = lang?.trim?.().toLowerCase() ?? '';
+    const safe: Language = normalized.startsWith('fa') ? 'fa' : 'en';
+    localStorage.setItem(STORAGE_KEYS.LANG, safe);
+  },
+
+  getTab(): string | null {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.TAB);
+      return raw && raw.trim() ? raw.trim() : null;
+    } catch {
+      return null;
+    }
+  },
+  setTab(tab: string): void {
+    try {
+      if (!tab || !tab.trim()) return;
+      localStorage.setItem(STORAGE_KEYS.TAB, tab.trim());
+    } catch {}
   },
 
   getAthletes(): Athlete[] {
@@ -98,11 +158,23 @@ export const StorageManager = {
     setStorage(STORAGE_KEYS.SESSION, session);
   },
 
-  getNutrition(): DailyNutritionPlan {
-    return getStorage<DailyNutritionPlan>(STORAGE_KEYS.NUTRITION, INITIAL_NUTRITION);
+  getNutritionPlans(): Record<string, DailyNutritionPlan> {
+    const raw = localStorage.getItem(STORAGE_KEYS.NUTRITION);
+    if (!raw) return INITIAL_NUTRITION_PLANS;
+    try {
+      const parsed = JSON.parse(raw);
+      // Migrate legacy single-plan shape (stored pre-per-athlete) by adopting it
+      // as that athlete's plan and reseeding the rest.
+      if (parsed && !Array.isArray(parsed) && parsed.athleteId) {
+        return { ...INITIAL_NUTRITION_PLANS, [parsed.athleteId as string]: parsed };
+      }
+      return parsed as Record<string, DailyNutritionPlan>;
+    } catch {
+      return INITIAL_NUTRITION_PLANS;
+    }
   },
-  saveNutrition(plan: DailyNutritionPlan): void {
-    setStorage(STORAGE_KEYS.NUTRITION, plan);
+  saveNutritionPlans(plans: Record<string, DailyNutritionPlan>): void {
+    setStorage(STORAGE_KEYS.NUTRITION, plans);
   },
 
   getCheckIns(): CheckIn[] {
@@ -139,18 +211,20 @@ export const StorageManager = {
   addAuditLog(actorName: string, actorRole: UserRole, action: string, details: string): void {
     const logs = this.getAuditLogs();
     const newLog: AuditLog = {
-      id: `aud-${Date.now()}`,
+      id: `aud-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       actorId: `user-${actorRole}`,
       actorName,
       actorRole,
       action,
       details,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      timestamp: new Date().toISOString(),
     };
-    setStorage(STORAGE_KEYS.AUDIT, [newLog, ...logs]);
+    const next = [newLog, ...logs].slice(0, 100);
+    setStorage(STORAGE_KEYS.AUDIT, next);
   },
 
   resetAll(): void {
+    // Keep role/language so post-reset reload stays where the user is; keep _SESSION to avoid schedule blank-screens.
     localStorage.removeItem(STORAGE_KEYS.ATHLETES);
     localStorage.removeItem(STORAGE_KEYS.PROGRAMS);
     localStorage.removeItem(STORAGE_KEYS.NUTRITION);

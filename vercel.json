@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "vite build",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "rewrites": [
+    { "source": "/api/health", "destination": "/api/health" },
+    { "source": "/api/ai/generate-workout", "destination": "/api/generate-workout" },
+    { "source": "/api/ai/analyze-checkin", "destination": "/api/analyze-checkin" },
+    { "source": "/api/ai/calculate-macros", "destination": "/api/calculate-macros" },
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
+  ]
+}

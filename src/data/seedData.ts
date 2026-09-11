@@ -10,6 +10,15 @@ import {
   AuditLog,
 } from '../types';
 
+/**
+ * Local SVG initials avatar — self-contained, zero network dependency.
+ * Returns an inline data URI usable directly in <img src>.
+ */
+export function initialsAvatar(initials: string, bg = '#0f766e', fg = '#ffffff'): string {
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='128' height='128' viewBox='0 0 128 128'><rect width='128' height='128' fill='${bg}'/><text x='64' y='64' dy='0.36em' text-anchor='middle' font-family='system-ui, sans-serif' font-size='52' font-weight='700' fill='${fg}'>${initials}</text></svg>`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
+
 export const INITIAL_PROFILES: Record<string, UserProfile> = {
   coach: {
     id: 'coach-1',
@@ -17,8 +26,7 @@ export const INITIAL_PROFILES: Record<string, UserProfile> = {
     nameFa: 'سامان راد',
     role: 'coach',
     email: 'saman.coach@athletica.io',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-    title: 'Head Performance Coach, CSCS',
+    avatar: initialsAvatar('SR', '#0d9488'),
     titleFa: 'سرمربی ارشد بدنسازی و عملکرد، CSCS',
     bio: '12+ years preparing national powerlifting champions and tactical athletes.',
     bioFa: 'بیش از ۱۲ سال سابقه آماده‌سازی قهرمانان ملی و ورزشکاران حرفه‌ای.',
@@ -30,8 +38,7 @@ export const INITIAL_PROFILES: Record<string, UserProfile> = {
     nameFa: 'علی رضایی',
     role: 'athlete',
     email: 'ali.rezaei@athletica.io',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    title: 'Advanced Trainee - Hypertrophy',
+    avatar: initialsAvatar('AR', '#0d9488'),
     titleFa: 'ورزشکار سطح پیشرفته - هایپرتروفی',
     bio: 'Focused on clean mass gain, squat 180kg goal, and improving mobility.',
     bioFa: 'تمرکز بر افزایش حجم عضلانی خالص، هدف اسکوات ۱۸۰ و بهبود تحرک.',
@@ -43,8 +50,7 @@ export const INITIAL_PROFILES: Record<string, UserProfile> = {
     nameFa: 'بهار نوری',
     role: 'dietitian',
     email: 'bahar.nutrition@athletica.io',
-    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
-    title: 'Clinical Sports Nutritionist & Dietitian',
+    avatar: initialsAvatar('BN', '#7c3aed'),
     titleFa: 'متخصص ارشد تغذیه ورزشی و رژیم‌درمانی',
     bio: 'Optimizing metabolic adaptations, peri-workout fueling, and body recomposition.',
     bioFa: 'تنظیم تخصصی درشت‌مغذی‌ها، سوخت‌رسانی پیرامون تمرین و ریکامپوزیشن بدن.',
@@ -56,8 +62,7 @@ export const INITIAL_PROFILES: Record<string, UserProfile> = {
     nameFa: 'مدیر ارشد سامانه',
     role: 'admin',
     email: 'admin@athletica.io',
-    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80',
-    title: 'Chief Operations & Systems Engineer',
+    avatar: initialsAvatar('PA', '#475569'),
     titleFa: 'مدیر عملیات و زیرساخت پلتفرم',
     bio: 'Overseeing platform uptime, coach verification, enterprise tenant security, and analytics.',
     bioFa: 'نظارت بر پایداری، احراز صلاحیت مربیان، امنیت و یکپارچگی سیستم.',
@@ -219,7 +224,7 @@ export const INITIAL_ATHLETES: Athlete[] = [
     name: 'Ali Rezaei',
     nameFa: 'علی رضایی',
     email: 'ali.rezaei@athletica.io',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+    avatar: initialsAvatar('AR', '#0d9488'),
     age: 27,
     gender: 'male',
     heightCm: 182,
@@ -244,7 +249,7 @@ export const INITIAL_ATHLETES: Athlete[] = [
     name: 'Elena Rostami',
     nameFa: 'النا رستمی',
     email: 'elena.rostami@athletica.io',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
+    avatar: initialsAvatar('ER', '#db2777'),
     age: 25,
     gender: 'female',
     heightCm: 168,
@@ -269,7 +274,7 @@ export const INITIAL_ATHLETES: Athlete[] = [
     name: 'Kaveh Danesh',
     nameFa: 'کاوه دانش',
     email: 'kaveh.danesh@athletica.io',
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
+    avatar: initialsAvatar('KD', '#2563eb'),
     age: 31,
     gender: 'male',
     heightCm: 178,
@@ -293,7 +298,7 @@ export const INITIAL_ATHLETES: Athlete[] = [
     name: 'Sara Mohammadi',
     nameFa: 'سارا محمدی',
     email: 'sara.m@athletica.io',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    avatar: initialsAvatar('SM', '#ea580c'),
     age: 29,
     gender: 'female',
     heightCm: 165,
@@ -528,6 +533,170 @@ export const INITIAL_NUTRITION: DailyNutritionPlan = {
   ],
 };
 
+/** Per-athlete nutrition plans — keyed by athleteId (single source of truth shape). */
+export const INITIAL_NUTRITION_PLANS: Record<string, DailyNutritionPlan> = {
+  'athlete-1': INITIAL_NUTRITION,
+  'athlete-2': {
+    id: 'nutr-2',
+    athleteId: 'athlete-2',
+    date: '2026-09-10',
+    targets: {
+      calories: 1650,
+      proteinGrams: 140,
+      carbsGrams: 130,
+      fatsGrams: 55,
+      waterMl: 2800,
+    },
+    waterLoggedMl: 1500,
+    notes: 'Moderate deficit (-500 kcal). High protein to preserve lean mass during fat-loss phase.',
+    notesFa: 'کسری متعادل (۵۰۰- کیلوکالری). پروتئین بالا برای حفظ توده عضلانی در فاز چربی‌سوزی.',
+    meals: [
+      {
+        id: 'm-e1',
+        type: 'breakfast',
+        name: 'Greek Yogurt Bowl & Walnuts',
+        nameFa: 'ماست یونان با گردو',
+        timeHint: '08:00 AM',
+        isCompleted: true,
+        items: [
+          { id: 'ie1', name: 'Greek Yogurt 2%', nameFa: 'ماست یونان ۲٪', portion: '250g', calories: 160, protein: 22, carbs: 8, fats: 4 },
+          { id: 'ie2', name: 'Walnuts & Cinnamon', nameFa: 'گردو و دارچین', portion: '20g', calories: 130, protein: 3, carbs: 3, fats: 13 },
+        ],
+      },
+      {
+        id: 'm-e2',
+        type: 'lunch',
+        name: 'Herb Chicken & Garden Salad',
+        nameFa: 'مرغ سبزیجات و سالاد فصل',
+        timeHint: '01:00 PM',
+        isCompleted: false,
+        items: [
+          { id: 'ie3', name: 'Grilled Chicken Thigh', nameFa: 'ران مرغ گریل شده', portion: '150g', calories: 250, protein: 38, carbs: 0, fats: 10 },
+          { id: 'ie4', name: 'Mixed Greens & Feta', nameFa: 'سبزیجات مخلوط و پنیر فتا', portion: '200g', calories: 120, protein: 6, carbs: 8, fats: 8 },
+        ],
+      },
+      {
+        id: 'm-e3',
+        type: 'dinner',
+        name: 'Baked White Fish & Roasted Vegetables',
+        nameFa: 'ماهی سفید تنوری با سبزیجات roast شده',
+        timeHint: '08:00 PM',
+        isCompleted: false,
+        items: [
+          { id: 'ie5', name: 'Sea Bass Fillet', nameFa: 'فیله ماهی سفید', portion: '180g', calories: 220, protein: 40, carbs: 0, fats: 6 },
+          { id: 'ie6', name: 'Roasted Broccoli & Carrots', nameFa: 'بروکلی و هویج تنوری', portion: '250g', calories: 110, protein: 5, carbs: 18, fats: 2 },
+        ],
+      },
+    ],
+  },
+  'athlete-3': {
+    id: 'nutr-3',
+    athleteId: 'athlete-3',
+    date: '2026-09-10',
+    targets: {
+      calories: 2900,
+      proteinGrams: 210,
+      carbsGrams: 320,
+      fatsGrams: 80,
+      waterMl: 4000,
+    },
+    waterLoggedMl: 3100,
+    notes: 'Peak competition block — maintenance calories, carb periodized around heavy sessions.',
+    notesFa: 'فاز اوج مسابقاتی — کالری تثبیت، کربوهیدرات پریودایز شده اطراف جلسات سنگین.',
+    meals: [
+      {
+        id: 'm-k1',
+        type: 'breakfast',
+        name: 'Power Oatmeal & Egg White Frittata',
+        nameFa: 'اوتمیل انرژی‌بخش و املت سفیده تخم‌مرغ',
+        timeHint: '07:30 AM',
+        isCompleted: true,
+        items: [
+          { id: 'ik1', name: 'Rolled Oats', nameFa: 'جو دوسر پرک', portion: '120g', calories: 450, protein: 15, carbs: 80, fats: 9 },
+          { id: 'ik2', name: 'Whole Eggs', nameFa: 'تخم‌مرغ کامل', portion: '3 eggs', calories: 215, protein: 19, carbs: 1, fats: 15 },
+        ],
+      },
+      {
+        id: 'm-k2',
+        type: 'lunch',
+        name: 'Lean Beef & Rice Pilaf',
+        nameFa: 'گوشت کم‌چرب و پلاف برنج',
+        timeHint: '01:00 PM',
+        isCompleted: true,
+        items: [
+          { id: 'ik3', name: 'Sirloin Steak', nameFa: 'استیک راسته', portion: '250g', calories: 430, protein: 55, carbs: 0, fats: 22 },
+          { id: 'ik4', name: 'Basmati Rice Pilaf', nameFa: 'پلاف برنج باسماتی', portion: '350g cooked', calories: 460, protein: 9, carbs: 98, fats: 3 },
+        ],
+      },
+      {
+        id: 'm-k3',
+        type: 'dinner',
+        name: 'Salmon & Quinoa Bowl',
+        nameFa: 'سالمون و کینوا',
+        timeHint: '08:30 PM',
+        isCompleted: false,
+        items: [
+          { id: 'ik5', name: 'Atlantic Salmon', nameFa: 'سالمون اطلس', portion: '200g', calories: 400, protein: 40, carbs: 0, fats: 26 },
+          { id: 'ik6', name: 'Quinoa & Roast Veg', nameFa: 'کینوا و سبزیجات roast', portion: '250g', calories: 280, protein: 10, carbs: 45, fats: 6 },
+        ],
+      },
+    ],
+  },
+  'athlete-4': {
+    id: 'nutr-4',
+    athleteId: 'athlete-4',
+    date: '2026-09-10',
+    targets: {
+      calories: 1900,
+      proteinGrams: 150,
+      carbsGrams: 180,
+      fatsGrams: 60,
+      waterMl: 2600,
+    },
+    waterLoggedMl: 900,
+    notes: 'Body recomposition for beginner — slight deficit, protein-forward, hydration compliance focus.',
+    notesFa: 'ریکامپوزیشن بدن برای مبتدی — کسری خفیف، پروتئین بالا، تمرکز بر پایبندی آب‌رسانی.',
+    meals: [
+      {
+        id: 'm-s1',
+        type: 'breakfast',
+        name: 'Cottage Cheese & Fruit Plate',
+        nameFa: 'پنیر کوتاژ و میوه',
+        timeHint: '08:00 AM',
+        isCompleted: false,
+        items: [
+          { id: 'is1', name: 'Cottage Cheese', nameFa: 'پنیر کوتاژ', portion: '200g', calories: 180, protein: 24, carbs: 8, fats: 6 },
+          { id: 'is2', name: 'Apple & Almonds', nameFa: 'سیب و بادام', portion: '1 apple + 15g', calories: 150, protein: 4, carbs: 22, fats: 7 },
+        ],
+      },
+      {
+        id: 'm-s2',
+        type: 'lunch',
+        name: 'Turkey Wrap & Hummus',
+        nameFa: 'رپ بوقلمون و حمص',
+        timeHint: '12:30 PM',
+        isCompleted: false,
+        items: [
+          { id: 'is3', name: 'Whole Wheat Wrap', nameFa: 'نان تست سبوس‌دار', portion: '1 wrap', calories: 200, protein: 8, carbs: 32, fats: 4 },
+          { id: 'is4', name: 'Turkey Breast & Vegetables', nameFa: 'سینه بوقلمون و سبزیجات', portion: '150g', calories: 210, protein: 32, carbs: 6, fats: 6 },
+        ],
+      },
+      {
+        id: 'm-s3',
+        type: 'dinner',
+        name: 'Lentil Stew & Flatbread',
+        nameFa: 'خوراک عدس و نان سنگک',
+        timeHint: '08:00 PM',
+        isCompleted: false,
+        items: [
+          { id: 'is5', name: 'Persian Lentil Stew', nameFa: 'خوراک عدس ایرانی', portion: '400g', calories: 320, protein: 18, carbs: 52, fats: 5 },
+          { id: 'is6', name: 'Sangak Flatbread', nameFa: 'نان سنگک', portion: '80g', calories: 200, protein: 7, carbs: 40, fats: 1 },
+        ],
+      },
+    ],
+  },
+};
+
 export const INITIAL_CHECKINS: CheckIn[] = [
   {
     id: 'chk-1',
@@ -546,7 +715,7 @@ export const INITIAL_CHECKINS: CheckIn[] = [
     energyRating: 8,
     adherenceRate: 95,
     athleteNotes: 'Great energy on squat day. Left chest felt a bit tight on dumbbell incline press but no sharp pain. Bodyweight is trending steadily at +0.3kg this week.',
-    frontPhotoUrl: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=400&auto=format&fit=crop&q=80',
+    frontPhotoUrl: undefined,
     coachReview: {
       reviewedAt: '2026-09-08 11:20 AM',
       commentary: 'Superb execution Ali! Delighted with the rate of gain (+0.3kg is right on target for clean surplus). Let us bump your bench press by 2.5kg next session.',
@@ -577,7 +746,7 @@ export const INITIAL_CHECKINS: CheckIn[] = [
     energyRating: 6,
     adherenceRate: 85,
     athleteNotes: 'Busy work week, slept poorly two nights. Patellar tendon had a twinge on Bulgarian split squats, had to reduce weight slightly.',
-    frontPhotoUrl: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=400&auto=format&fit=crop&q=80',
+    frontPhotoUrl: undefined,
   },
 ];
 

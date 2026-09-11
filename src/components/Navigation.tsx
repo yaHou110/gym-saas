@@ -43,7 +43,7 @@ export const Navigation: React.FC<NavigationProps> = ({
   if (currentRole === 'coach') {
     items = [
       { id: 'roster', label: t.nav.athletes, icon: Users },
-      { id: 'programs', label: t.nav.programs, icon: FileCode2 },
+      { id: 'builder', label: t.nav.programs, icon: FileCode2 },
       { id: 'exercises', label: t.nav.exercises, icon: BookOpen },
       { id: 'checkins', label: t.nav.checkins, icon: ClipboardCheck, badge: pendingCheckInsCount },
       { id: 'nutrition', label: t.nav.nutrition, icon: Apple },
@@ -52,9 +52,10 @@ export const Navigation: React.FC<NavigationProps> = ({
   } else if (currentRole === 'athlete') {
     items = [
       { id: 'today', label: t.nav.todayWorkout, icon: Dumbbell },
+      { id: 'program', label: t.nav.programs, icon: FileCode2 },
       { id: 'nutrition', label: t.nav.myNutrition, icon: Apple },
       { id: 'checkin', label: t.nav.myCheckIn, icon: CalendarDays },
-      { id: 'progress', label: t.nav.myProgress, icon: Activity },
+      { id: 'records', label: t.nav.myProgress, icon: Activity },
       { id: 'exercises', label: t.nav.exercises, icon: BookOpen },
     ];
   } else if (currentRole === 'dietitian') {

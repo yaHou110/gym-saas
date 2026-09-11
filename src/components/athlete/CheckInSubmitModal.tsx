@@ -38,9 +38,7 @@ export const CheckInSubmitModal: React.FC<CheckInSubmitModalProps> = ({
   const [energyRating, setEnergyRating] = useState<number>(8);
   const [adherenceRate, setAdherenceRate] = useState<number>(92);
   const [notes, setNotes] = useState('');
-  const [photoUrl, setPhotoUrl] = useState<string>(
-    'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=400&auto=format&fit=crop&q=80'
-  );
+  const [photoUrl, setPhotoUrl] = useState<string>('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -246,11 +244,21 @@ export const CheckInSubmitModal: React.FC<CheckInSubmitModalProps> = ({
               Physique Check-In Photo (Optional)
             </label>
             <div className="flex items-center gap-4">
-              <img
-                src={photoUrl}
-                alt="Preview"
-                className="w-16 h-20 rounded-xl object-cover ring-1 ring-slate-700 shrink-0"
-              />
+              {photoUrl ? (
+                <img
+                  src={photoUrl}
+                  alt="Preview"
+                  className="w-16 h-20 rounded-xl object-cover ring-1 ring-slate-700 shrink-0"
+                />
+              ) : (
+                <div className="w-16 h-20 rounded-xl bg-slate-800 ring-1 ring-slate-700 shrink-0 flex flex-col items-center justify-center gap-1">
+                  <Camera className="w-5 h-5 text-slate-500" />
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500">
+                    None
+                  </span>
+                  <span className="sr-only">No photo added yet</span>
+                </div>
+              )}
               <div className="flex-1">
                 <span className="text-xs text-slate-300 block mb-1">
                   Simulate Camera / Image Upload

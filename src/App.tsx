@@ -11,9 +11,10 @@ import {
   PersonalRecord,
   Exercise,
   ChatMessage,
+  AuditLog,
 } from './types';
 import { translations } from './i18n/translations';
-import { StorageManager } from './utils/storage';
+import { STORAGE_KEYS, StorageManager } from './utils/storage';
 import { Header } from './components/Header';
 import { Navigation } from './components/Navigation';
 
@@ -27,6 +28,10 @@ import { AthleteTodayView } from './components/athlete/AthleteTodayView';
 import { NutritionTracker } from './components/athlete/NutritionTracker';
 import { CheckInSubmitModal } from './components/athlete/CheckInSubmitModal';
 import { ProgressAnalytics } from './components/athlete/ProgressAnalytics';
+
+// Admin & Dietitian Portals
+import { AdminPortal } from './components/admin/AdminPortal';
+import { DietitianPortal } from './components/dietitian/DietitianPortal';
 
 // Shared Components
 import { ExerciseLibraryModal } from './components/shared/ExerciseLibraryModal';
@@ -44,10 +49,29 @@ import {
 } from 'lucide-react';
 
 export default function App() {
-  // Global State
-  const [role, setRole] = useState<UserRole>('coach');
-  const [language, setLanguage] = useState<Language>('en');
-  const [activeTab, setActiveTab] = useState<string>('roster');
+  const TABS_BY_ROLE: Record<UserRole, readonly string[]> = {
+    coach: ['roster', 'builder', 'checkins', 'exercises', 'analytics', 'nutrition'] as const,
+    athlete: ['today', 'program', 'nutrition', 'checkin', 'records', 'exercises'] as const,
+    dietitian: ['nutrition', 'roster', 'checkins'] as const,
+    admin: ['adminOverview', 'roster', 'adminAudit'] as const,
+  };
+  const defaultTabFor = (r: UserRole) => {
+    if (r === 'dietitian') return 'nutrition';
+    if (r === 'admin') return 'adminOverview';
+    if (r === 'athlete') return 'today';
+    return 'roster';
+  };
+
+  // Global State — restored so reload round-trips placement + RTL direction
+  const [role, setRole] = useState<UserRole>(() => StorageManager.getRole());
+  const [language, setLanguage] = useState<Language>(() => StorageManager.getLanguage());
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    const r = StorageManager.getRole();
+    const stored = StorageManager.getTab();
+    const allowed = TABS_BY_ROLE[r] ?? [];
+    if (stored && (allowed as readonly string[]).includes(stored)) return stored;
+    return defaultTabFor(r);
+  });
 
   // Domain State loaded from Storage
   const [coach, setCoach] = useState<Coach>(StorageManager.getCoach());
@@ -59,13 +83,14 @@ export default function App() {
   const [todaySession, setTodaySession] = useState<WorkoutSession>(
     StorageManager.getTodaySession()
   );
-  const [nutritionPlan, setNutritionPlan] = useState<DailyNutritionPlan>(
-    StorageManager.getNutrition()
+  const [nutritionPlans, setNutritionPlans] = useState<Record<string, DailyNutritionPlan>>(
+    StorageManager.getNutritionPlans()
   );
   const [checkIns, setCheckIns] = useState<CheckIn[]>(StorageManager.getCheckIns());
   const [prs, setPrs] = useState<PersonalRecord[]>(StorageManager.getPRs());
   const [exercises, setExercises] = useState<Exercise[]>(StorageManager.getExercises());
   const [messages, setMessages] = useState<ChatMessage[]>(StorageManager.getMessages());
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => StorageManager.getAuditLogs());
 
   // Modals and Drawers
   const [isAICoachOpen, setIsAICoachOpen] = useState(false);
@@ -77,35 +102,95 @@ export default function App() {
   const currentAthlete = athletes.find((a) => a.id === selectedAthleteId) || athletes[0];
   const t = translations[language];
 
-  // Handle RTL direction switch
+  // Persist language + keep html dir/lang in sync with RTL فارسی support.
   useEffect(() => {
+    StorageManager.setLanguage(language);
     document.documentElement.dir = language === 'fa' ? 'rtl' : 'ltr';
     document.documentElement.lang = language;
   }, [language]);
+
+  useEffect(() => {
+    StorageManager.setRole(role);
+  }, [role]);
+
+  useEffect(() => {
+    StorageManager.setTab(activeTab);
+  }, [activeTab]);
+
+  // If role changes and stored tab is invalid for new role (e.g. after legacy reload), correct it once.
+  useEffect(() => {
+    const allowed = TABS_BY_ROLE[role] ?? [];
+    if (!(allowed as readonly string[]).includes(activeTab)) {
+      setActiveTab(defaultTabFor(role));
+    }
+  }, [role]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle Role Switch tab resets
   const handleRoleChange = (newRole: UserRole) => {
     setRole(newRole);
     if (newRole === 'coach') {
       setActiveTab('roster');
+    } else if (newRole === 'dietitian') {
+      setActiveTab('nutrition');
+    } else if (newRole === 'admin') {
+      setActiveTab('adminOverview');
     } else {
       setActiveTab('today');
     }
   };
 
+  // Keep audit strings localised: details are composed from i18n templates so fa reads in فارسی.
+  const fmt = (tmpl: string, vars: Record<string, string | number>) =>
+    tmpl.replace(/\{(\w+)\}/g, (_, k) => String(vars[k] ?? ''));
+
+  const displayAthleteName = (a: Athlete | undefined, fallbackId?: string) => {
+    if (!a) return fallbackId ?? '—';
+    return language === 'fa' ? a.nameFa : a.name;
+  };
+
+  const prevNutritionRef = React.useRef<Record<string, DailyNutritionPlan>>(nutritionPlans);
+  useEffect(() => {
+    prevNutritionRef.current = nutritionPlans;
+  }, [nutritionPlans]);
+
+  // Lean audit helper — uses the visible actor (current role) so admin sees who mutated what.
+  // Keeps the glossary to exactly the traced mutations; newest-first is enforced by addAuditLog's prepend
+  // and re-sorted by ISO timestamp in AdminPortal.
+  const pushAudit = (actionKey: string, details: string) => {
+    const profile = StorageManager.getProfile(role);
+    StorageManager.addAuditLog(profile.name, profile.role, actionKey, details);
+    setAuditLogs(StorageManager.getAuditLogs());
+  };
+
   // Handlers for updating state and syncing to storage
   const handleSaveProgram = (updatedProgram: Program) => {
-    const nextPrograms = programs.map((p) =>
-      p.id === updatedProgram.id ? updatedProgram : p
-    );
+    const isCreate = !programs.some((p) => p.id === updatedProgram.id);
+    const nextPrograms = isCreate
+      ? [...programs, updatedProgram]
+      : programs.map((p) => (p.id === updatedProgram.id ? updatedProgram : p));
     setPrograms(nextPrograms);
     StorageManager.savePrograms(nextPrograms);
+    const athlete = updatedProgram.athleteId ? athletes.find((a) => a.id === updatedProgram.athleteId) : undefined;
+    const athleteName = athlete ? displayAthleteName(athlete) : '';
+    const label = isCreate ? t.admin.auditProgramCreated : t.admin.auditProgramSaved;
+    const details = (() => {
+      const vars = { title: updatedProgram.title, weeks: updatedProgram.durationWeeks, days: updatedProgram.daysPerWeek, athlete: athleteName };
+      if (athlete) return fmt(isCreate ? t.admin.auditDetailProgramCreatedWithAthlete : t.admin.auditDetailProgramWithAthlete, vars);
+      return fmt(isCreate ? t.admin.auditDetailProgramCreated : t.admin.auditDetailProgram, vars);
+    })();
+    pushAudit(label, details);
   };
 
   const handleCreateProgram = (newProgram: Program) => {
     const next = [...programs, newProgram];
     setPrograms(next);
     StorageManager.savePrograms(next);
+    const athlete = newProgram.athleteId ? athletes.find((a) => a.id === newProgram.athleteId) : undefined;
+    const athleteName = athlete ? displayAthleteName(athlete) : '';
+    const details = athlete
+      ? fmt(t.admin.auditDetailProgramCreatedWithAthlete, { title: newProgram.title, weeks: newProgram.durationWeeks, days: newProgram.daysPerWeek, athlete: athleteName })
+      : fmt(t.admin.auditDetailProgramCreated, { title: newProgram.title, weeks: newProgram.durationWeeks, days: newProgram.daysPerWeek });
+    pushAudit(t.admin.auditProgramCreated, details);
   };
 
   const handleUpdateAthlete = (updated: Athlete) => {
@@ -130,11 +215,41 @@ export default function App() {
       };
       handleUpdateAthlete(updatedAth);
     }
+    const sName = language === 'fa' ? todaySession.nameFa : todaySession.name;
+    pushAudit(
+      t.admin.auditWorkoutLogged,
+      fmt(t.admin.auditDetailWorkout, { session: sName, rpe: feedback.sessionRpe, energy: feedback.energyLevel, athlete: displayAthleteName(currentAthlete) })
+    );
   };
 
   const handleUpdateNutrition = (newPlan: DailyNutritionPlan) => {
-    setNutritionPlan(newPlan);
-    StorageManager.saveNutrition(newPlan);
+    const prev = prevNutritionRef.current[newPlan.athleteId];
+    const next = { ...nutritionPlans, [newPlan.athleteId]: newPlan };
+    setNutritionPlans(next);
+    StorageManager.saveNutritionPlans(next);
+    const athlete = athletes.find((a) => a.id === newPlan.athleteId) ?? currentAthlete;
+    const athleteName = displayAthleteName(athlete, newPlan.athleteId);
+    // Distinguish water-only edits (e.g. +250ml) from macro/target or meal edits
+    const isWaterOnly =
+      !!prev &&
+      prev.waterLoggedMl !== newPlan.waterLoggedMl &&
+      prev.targets.calories === newPlan.targets.calories &&
+      prev.targets.proteinGrams === newPlan.targets.proteinGrams &&
+      prev.targets.carbsGrams === newPlan.targets.carbsGrams &&
+      prev.targets.fatsGrams === newPlan.targets.fatsGrams &&
+      prev.targets.waterMl === newPlan.targets.waterMl;
+    if (isWaterOnly) {
+      const delta = newPlan.waterLoggedMl - prev.waterLoggedMl;
+      pushAudit(
+        t.admin.auditNutritionWater,
+        fmt(t.admin.auditDetailNutritionWater, { ml: delta, athlete: athleteName, total: newPlan.waterLoggedMl, target: newPlan.targets.waterMl })
+      );
+    } else {
+      pushAudit(
+        t.admin.auditNutritionUpdated,
+        fmt(t.admin.auditDetailNutritionMacro, { athlete: athleteName, kcal: newPlan.targets.calories })
+      );
+    }
   };
 
   const handleSubmitCheckIn = (newCheckIn: CheckIn) => {
@@ -178,6 +293,13 @@ export default function App() {
     });
     setCheckIns(next);
     StorageManager.saveCheckIns(next);
+    const reviewed = checkIns.find((c) => c.id === checkInId) ?? reviewingCheckIn;
+    const targetAth = reviewed ? athletes.find((a) => a.id === reviewed.athleteId) ?? currentAthlete : currentAthlete;
+    const shortCommentary = commentary.slice(0, 80) + (commentary.length > 80 ? '…' : '');
+    pushAudit(
+      t.admin.auditCheckinReviewed,
+      fmt(t.admin.auditDetailCheckin, { athlete: displayAthleteName(targetAth, checkInId), commentary: shortCommentary })
+    );
 
     // Also auto-post a message in chat so the athlete gets an immediate notification!
     const noticeMsg: ChatMessage = {
@@ -226,6 +348,18 @@ export default function App() {
     StorageManager.saveMessages(next);
   };
 
+  const handleResetData = () => {
+    // Must trace even a destructive reset — log BEFORE wiping, then persist the one audit row across reload.
+    const profile = StorageManager.getProfile(role);
+    StorageManager.addAuditLog(profile.name, profile.role, t.admin.auditDataReset, t.admin.auditDetailReset);
+    const auditBeforeReset = StorageManager.getAuditLogs();
+    StorageManager.resetAll();
+    try {
+      localStorage.setItem(STORAGE_KEYS.AUDIT, JSON.stringify(auditBeforeReset));
+    } catch {}
+    window.location.reload();
+  };
+
   const unreadChatCount = messages.filter(
     (m) =>
       !m.isRead &&
@@ -247,16 +381,18 @@ export default function App() {
         onLanguageChange={setLanguage}
         onOpenAICoach={() => setIsAICoachOpen(true)}
         onOpenChat={() => setIsChatOpen(true)}
-        unreadMessagesCount={unreadChatCount}
+        unreadCount={unreadChatCount}
+        pendingCheckInsCount={pendingCheckInsCount}
+        onResetData={handleResetData}
       />
 
       {/* Navigation Sub-header */}
       <Navigation
-        role={role}
+        currentRole={role}
         activeTab={activeTab}
         onTabChange={setActiveTab}
         language={language}
-        pendingReviewsCount={pendingCheckInsCount}
+        pendingCheckInsCount={pendingCheckInsCount}
       />
 
       {/* Main Content Workspace */}
@@ -267,27 +403,31 @@ export default function App() {
             {activeTab === 'roster' && (
               <CoachDashboard
                 athletes={athletes}
-                coach={coach}
                 checkIns={checkIns}
                 language={language}
                 onSelectAthlete={(ath) => {
                   setSelectedAthleteId(ath.id);
                   setActiveTab('builder');
                 }}
-                onOpenReview={(chk) => setReviewingCheckIn(chk)}
+                onReviewCheckIn={(chk) => setReviewingCheckIn(chk)}
                 onOpenAICoach={() => setIsAICoachOpen(true)}
-                onNavigateToBuilder={() => setActiveTab('builder')}
+                onOpenProgramBuilder={() => setActiveTab('builder')}
+                onOpenChatWithAthlete={(ath) => {
+                  setSelectedAthleteId(ath.id);
+                  setIsChatOpen(true);
+                }}
               />
             )}
 
             {activeTab === 'builder' && (
               <ProgramBuilder
                 program={programs[0]}
-                athlete={currentAthlete}
+                athletes={athletes}
                 exercises={exercises}
                 language={language}
                 onSaveProgram={handleSaveProgram}
                 onOpenAICoach={() => setIsAICoachOpen(true)}
+                onClose={() => setActiveTab('roster')}
               />
             )}
 
@@ -428,7 +568,7 @@ export default function App() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {programs[0].microcycles[0]?.workoutSessions.map((sess, sIdx) => (
+                  {programs[0].sessions.map((sess, sIdx) => (
                     <div
                       key={sess.id}
                       className="bg-slate-900 p-5 rounded-2xl border border-slate-800 space-y-3"
@@ -547,9 +687,10 @@ export default function App() {
               </div>
             )}
 
-            {activeTab === 'nutrition' && (
+            {activeTab === 'nutrition' && currentAthlete && (
               <NutritionTracker
-                plan={nutritionPlan}
+                key={currentAthlete.id}
+                plan={nutritionPlans[currentAthlete.id]}
                 athlete={currentAthlete}
                 language={language}
                 onUpdatePlan={handleUpdateNutrition}
@@ -566,6 +707,31 @@ export default function App() {
               />
             )}
           </>
+        )}
+
+        {/* ================= DIETITIAN PORTAL ================= */}
+        {role === 'dietitian' && (
+          <DietitianPortal
+            athletes={athletes}
+            nutritionPlans={nutritionPlans}
+            checkIns={checkIns}
+            activeTab={activeTab}
+            language={language}
+            onUpdatePlan={handleUpdateNutrition}
+            onOpenAICoach={() => setIsAICoachOpen(true)}
+            onNavigateToNutrition={() => setActiveTab('nutrition')}
+          />
+        )}
+
+        {/* ================= ADMIN PORTAL ================= */}
+        {role === 'admin' && (
+          <AdminPortal
+            athletes={athletes}
+            checkIns={checkIns}
+            activeTab={activeTab}
+            language={language}
+            auditLogs={auditLogs}
+          />
         )}
       </main>
 
